@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.pixeldreamstudios.mobs_of_mythology.MobsOfMythology;
@@ -73,6 +74,10 @@ public class EntityRegistry {
 
         SpawnPlacementsRegistry.register(EntityRegistry.SPORELING, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, SporelingEntity::checkMobSpawnRules);
         BiomeModifications.addProperties(b -> b.hasTag(TagRegistry.MUSHROOM_BIOMES), (ctx, b) -> b.getSpawnProperties().addSpawn(MobCategory.CREATURE, new MobSpawnSettings.SpawnerData(SPORELING.get(), MobsOfMythology.config.sporelingSpawnWeight, 4, 6)));
+
+        SpawnPlacementsRegistry.register(EntityRegistry.PEGASUS, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, PegasusEntity::checkMobSpawnRules);
+        BiomeModifications.addProperties(b -> b.hasTag(TagRegistry.DARK_FOREST_BIOMES), (ctx, b) -> b.getSpawnProperties().addSpawn(MobCategory.CREATURE, new MobSpawnSettings.SpawnerData(PEGASUS.get(), MobsOfMythology.config.PegasusSpawnWeight, 1, 1)));
+
     }
 
     private static void initAttributes() {

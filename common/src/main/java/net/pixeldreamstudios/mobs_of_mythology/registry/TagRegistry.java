@@ -20,4 +20,5 @@ public record TagRegistry() {
     public static TagKey<Biome> BADLANDS_BIOMES = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("c", "is_badlands"));
     public static TagKey<Biome> MUSHROOM_BIOMES = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("c", "is_mushroom"));
     public static TagKey<Biome> TEMPERATE_BIOMES = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("c", "is_temperate"));
+    public static TagKey<Biome> DARK_FOREST_BIOMES = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("c", "is_dark_forest"));
 }

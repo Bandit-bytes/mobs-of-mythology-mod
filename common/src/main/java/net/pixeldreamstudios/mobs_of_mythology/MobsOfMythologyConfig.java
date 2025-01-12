@@ -79,6 +79,9 @@ public class MobsOfMythologyConfig {
     public double pegasusHealth = 50.0;
     @Configurable
     @Configurable.Synchronized
+    public int PegasusSpawnWeight = 10;
+    @Configurable
+    @Configurable.Synchronized
     public int drakeSpawnWeight = 10;
     @Configurable
     @Configurable.Synchronized
