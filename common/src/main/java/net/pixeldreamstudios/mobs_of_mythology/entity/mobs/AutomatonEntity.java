@@ -84,6 +84,9 @@ public class AutomatonEntity extends TamableAnimal implements GeoEntity {
         this.targetSelector.addGoal(3, (new HurtByTargetGoal(this, new Class[0])).setAlertOthers(new Class[0]));
         this.targetSelector.addGoal(4, new NearestAttackableTargetGoal(this, Monster.class, false));
         this.targetSelector.addGoal(5, new ResetUniversalAngerTargetGoal(this, true));
+        if (MobsOfMythology.config.automatonAlwaysHostile) {
+            this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        }
     }
 
     public static AttributeSupplier.Builder createAttributes() {

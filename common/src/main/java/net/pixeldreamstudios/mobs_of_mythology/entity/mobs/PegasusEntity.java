@@ -8,17 +8,25 @@ import mod.azure.azurelib.core.animation.AnimatableManager;
 import mod.azure.azurelib.core.animation.AnimationController;
 import mod.azure.azurelib.core.object.PlayState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.animal.horse.AbstractChestedHorse;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
@@ -54,17 +62,31 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class PegasusEntity extends AbstractChestedHorse implements GeoEntity, SmartBrainOwner<PegasusEntity> {
+public class PegasusEntity extends AbstractChestedHorse implements GeoEntity, SmartBrainOwner<PegasusEntity>, FlyingAnimal {
     private final AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
+    private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(PegasusEntity.class, EntityDataSerializers.INT);
+//    private static final String KEY_VARIANT = "Variant";
+
+    private static final int FLYING_INTERVAL = 8;
+    protected int flyingTime;
+
+    protected boolean isFlying;
+    protected GroundPathNavigation groundNavigation;
+    protected FlyingPathNavigation flyingNavigation;
 
     public PegasusEntity(EntityType<? extends AbstractChestedHorse> entityType, Level level) {
         super(entityType, level);
-        this.navigation = new SmoothFlyingPathNavigation(this, level);
+//        this.navigation = new SmoothFlyingPathNavigation(this, level);
     }
 
     @Override
     protected void randomizeAttributes(RandomSource randomSource) {
 
+    }
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(VARIANT, 0);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -72,7 +94,7 @@ public class PegasusEntity extends AbstractChestedHorse implements GeoEntity, Sm
                 .add(Attributes.MAX_HEALTH, MobsOfMythology.config.pegasusHealth)
                 .add(Attributes.MOVEMENT_SPEED, 0.3f)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.75)
-                .add(Attributes.FLYING_SPEED, 0.75)
+                .add(Attributes.FLYING_SPEED, 1.75)
                 .add(Attributes.JUMP_STRENGTH, 0.6f);
     }
 
@@ -100,6 +122,39 @@ public class PegasusEntity extends AbstractChestedHorse implements GeoEntity, Sm
         }
 
         return bl;
+    }
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        groundNavigation = new GroundPathNavigation(this, level);
+        flyingNavigation = new FlyingPathNavigation(this, level);
+        return groundNavigation;
+    }
+    @Override
+    public PathNavigation getNavigation() {
+        if (this.isPassenger() && this.getVehicle() instanceof Mob) {
+            Mob mob = (Mob)this.getVehicle();
+            return mob.getNavigation();
+        } else if(this.isFlying()) {
+            return this.flyingNavigation;
+        } else {
+            return this.groundNavigation;
+        }
+    }
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        // update flying
+        if (flyingTime > 0) {
+            flyingTime--;
+        }
+        if (!isVehicle()) {
+            isFlying = false;
+        }
+        // fall slowly when being ridden
+        if (isVehicle() && this.getDeltaMovement().y < -0.1D) {
+            this.setDeltaMovement(this.getDeltaMovement().multiply(1.0, 0.95D, 1.0));
+        }
+
     }
 
 //    @Override
@@ -195,38 +250,14 @@ public class PegasusEntity extends AbstractChestedHorse implements GeoEntity, Sm
         }
     }
 
-    @Override
-    protected @NotNull PathNavigation createNavigation(@NotNull Level worldIn) {
-        final var flyingpathnavigator = new SmoothFlyingPathNavigation(this, worldIn);
-        flyingpathnavigator.setCanOpenDoors(false);
-        flyingpathnavigator.setCanFloat(false);
-        flyingpathnavigator.setCanPassDoors(false);
-        return flyingpathnavigator;
-    }
-
-    @Override
-    public void travel(@NotNull Vec3 movementInput) {
-        if (isInWater()) {
-            moveRelative(0.02F, movementInput);
-            move(MoverType.SELF, getDeltaMovement());
-            this.setDeltaMovement(getDeltaMovement().scale(0.8F));
-        } else if (isInLava()) {
-            moveRelative(0.02F, movementInput);
-            move(MoverType.SELF, getDeltaMovement());
-            this.setDeltaMovement(getDeltaMovement().scale(0.5D));
-        } else {
-            final var ground = BlockPos.containing(this.getX(), this.getY() - 1.0D, this.getZ());
-            var f = 0.91F;
-            if (onGround()) f = level().getBlockState(ground).getBlock().getFriction() * 0.91F;
-            final var f1 = 0.16277137F / (f * f * f);
-            f = 0.91F;
-            if (onGround()) f = level().getBlockState(ground).getBlock().getFriction() * 0.91F;
-            moveRelative(onGround() ? 0.1F * f1 : 0.02F, movementInput);
-            move(MoverType.SELF, getDeltaMovement());
-            this.setDeltaMovement(getDeltaMovement().scale(f));
-        }
-    }
-
+//    @Override
+//    protected @NotNull PathNavigation createNavigation(@NotNull Level worldIn) {
+//        final var flyingpathnavigator = new SmoothFlyingPathNavigation(this, worldIn);
+//        flyingpathnavigator.setCanOpenDoors(false);
+//        flyingpathnavigator.setCanFloat(false);
+//        flyingpathnavigator.setCanPassDoors(false);
+//        return flyingpathnavigator;
+//    }
 
     @Override
     public boolean causeFallDamage(float f, float g, DamageSource damageSource) {
@@ -269,5 +300,70 @@ public class PegasusEntity extends AbstractChestedHorse implements GeoEntity, Sm
     protected SoundEvent getEatingSound() {
         this.playSound(SoundEvents.HORSE_EAT, 1.0f, 1.25f);
         return null;
+    }
+    @Override
+    public void handleStartJump(int jumpPower) {
+        if (!this.onGround()) {
+            this.setStanding(false);
+        }
+    }
+    @Override
+    public void setJumping(boolean jumping) {
+        this.jumping = jumping;
+    }
+    @Override
+    public @NotNull InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (!this.level().isClientSide && !this.isVehicle()) {
+            player.startRiding(this);
+            return InteractionResult.SUCCESS;
+        }
+        return super.mobInteract(player, hand);
+    }
+    @Override
+    public boolean canJump() {
+        return super.canJump() && flyingTime <= 0;
+    }
+    @Override
+    public void onPlayerJump(int jumpPower) {
+        if (this.canJump()) {
+            this.setJumping(true);
+            this.flyingJump();
+        }
+    }
+    public void flyingJump() {
+        if (flyingTime <= 0 && this.canJump()) {
+            float jumpMotion = 4.6F;
+            this.setDeltaMovement(this.getDeltaMovement().add(0, jumpMotion, 0));
+            this.flyingTime = FLYING_INTERVAL;
+            this.isFlying = true;
+        }
+    }
+    @Override
+    public void handleStopJump() {
+        this.setIsJumping(false);
+    }
+    @Override
+    public boolean isFlying() {
+        final double flyingMotion = isBaby() ? 0.02D : 0.06D;
+        return !this.onGround() || this.getDeltaMovement().lengthSqr() > flyingMotion;
+    }
+    @Override
+    public boolean isJumping() {
+        return false;
+    }
+    @Override
+    @Nullable
+    public LivingEntity getControllingPassenger() {
+        Entity entity = this.getFirstPassenger();
+        return (entity instanceof Player) ? (Player) entity : null;
+    }
+    @Override
+    public void travel(final Vec3 vec) {
+        super.travel(vec);
+
+    }
+    @Override
+    public void readAdditionalSaveData(CompoundTag compound) {
+        super.readAdditionalSaveData(compound);
     }
 }
