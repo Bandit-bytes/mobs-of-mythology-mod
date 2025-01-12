@@ -76,7 +76,7 @@ public class EntityRegistry {
         BiomeModifications.addProperties(b -> b.hasTag(TagRegistry.MUSHROOM_BIOMES), (ctx, b) -> b.getSpawnProperties().addSpawn(MobCategory.CREATURE, new MobSpawnSettings.SpawnerData(SPORELING.get(), MobsOfMythology.config.sporelingSpawnWeight, 4, 6)));
 
         SpawnPlacementsRegistry.register(EntityRegistry.PEGASUS, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, PegasusEntity::checkMobSpawnRules);
-        BiomeModifications.addProperties(b -> b.hasTag(TagRegistry.DARK_FOREST_BIOMES), (ctx, b) -> b.getSpawnProperties().addSpawn(MobCategory.CREATURE, new MobSpawnSettings.SpawnerData(PEGASUS.get(), MobsOfMythology.config.PegasusSpawnWeight, 1, 1)));
+        BiomeModifications.addProperties(b -> b.hasTag(TagRegistry.MOUNTIAN_PEAK_BIOMES), (ctx, b) -> b.getSpawnProperties().addSpawn(MobCategory.CREATURE, new MobSpawnSettings.SpawnerData(PEGASUS.get(), MobsOfMythology.config.PegasusSpawnWeight, 1, 1)));
 
     }
 
